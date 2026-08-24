@@ -1,0 +1,32 @@
+{
+  "name": "open-agent-sidebar",
+  "version": "0.1.0",
+  "description": "opencode TUI plugin that shows subagents (task child sessions) live in the sidebar",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "opencode": "^1.18.0"
+  },
+  "exports": {
+    "./tui": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "NODE_ENV=production bun build src/index.tsx --outdir dist --target bun --format esm --external @opencode-ai/plugin --external @opencode-ai/plugin/tui --external @opencode-ai/sdk --external @opentui/solid --external @opentui/solid/jsx-runtime --external @opentui/core --external @opentui/keymap --external solid-js --external solid-js/store",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": "^1.18.0",
+    "@opentui/solid": ">=0.5.0",
+    "solid-js": "^1.9.12"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "1.18.21",
+    "@opentui/keymap": "^0.5.7",
+    "@opentui/solid": "0.5.7",
+    "solid-js": "1.9.12",
+    "typescript": "^7.0.2"
+  }
+}

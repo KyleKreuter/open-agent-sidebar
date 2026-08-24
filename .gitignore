@@ -1,0 +1,16 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+
+# opencode dev-harness artifacts (tui.json stays tracked)
+.opencode/node_modules/
+.opencode/package.json
+.opencode/bun.lock
+
+# session/agent scratch space
+.tmp/
+
+# os
+.DS_Store
