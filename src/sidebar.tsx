@@ -15,6 +15,8 @@ import type { SubagentNode, SubagentStatus } from "./types"
 
 /** Longest rendered description before truncation with an ellipsis. */
 const MAX_DESCRIPTION = 60
+/** Longest rendered activity line before truncation with an ellipsis. */
+const MAX_ACTIVITY = 30
 
 /** Map a subagent lifecycle status to its theme color. */
 function statusColor(theme: TuiThemeCurrent, status: SubagentStatus) {
@@ -24,10 +26,10 @@ function statusColor(theme: TuiThemeCurrent, status: SubagentStatus) {
   return theme.textMuted
 }
 
-/** Clip a description to a readable width. */
-function truncate(description: string): string {
-  if (description.length <= MAX_DESCRIPTION) return description
-  return `${description.slice(0, MAX_DESCRIPTION - 1)}…`
+/** Clip a string to a readable width, appending an ellipsis when truncated. */
+function truncate(value: string, max: number): string {
+  if (value.length <= max) return value
+  return `${value.slice(0, max - 1)}…`
 }
 
 export interface SidebarViewProps {
@@ -65,12 +67,12 @@ function TreeRow(props: TreeRowProps) {
       <box flexDirection="row" gap={1} paddingLeft={props.depth * 2}>
         <text fg={statusColor(props.theme, node.status)}>{statusIcon(node.status)}</text>
         <text>{node.agent}</text>
-        <text fg={props.theme.textMuted}>{truncate(node.description)}</text>
+        <text fg={props.theme.textMuted}>{truncate(node.description, MAX_DESCRIPTION)}</text>
         {todos === undefined ? null : (
           <text fg={props.theme.info}>{`(${todos.done}/${todos.total})`}</text>
         )}
         {activity === undefined ? null : (
-          <text fg={props.theme.textMuted}>{`[${activity}]`}</text>
+          <text fg={props.theme.textMuted}>{`[${truncate(activity, MAX_ACTIVITY)}]`}</text>
         )}
       </box>
       <For each={props.node.children}>

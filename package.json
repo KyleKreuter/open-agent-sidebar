@@ -5,7 +5,7 @@
   "type": "module",
   "license": "MIT",
   "engines": {
-    "opencode": "^1.18.0"
+    "opencode": "~1.18.0"
   },
   "exports": {
     "./tui": "./dist/index.js"
@@ -24,6 +24,7 @@
   },
   "devDependencies": {
     "@opencode-ai/plugin": "1.18.21",
+    "@opencode-ai/sdk": "1.18.21",
     "@opentui/keymap": "^0.5.7",
     "@opentui/solid": "0.5.7",
     "solid-js": "1.9.12",

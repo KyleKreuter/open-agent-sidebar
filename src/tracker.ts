@@ -61,7 +61,10 @@ async function syncInitial(api: TuiPluginApi, store: TrackerStore): Promise<void
 
   for (const session of listResult.data) {
     if (session.parentID === undefined) continue
-    store.upsert(session.id, nodeFromSession(session, statusFromSessionStatus(statuses[session.id])))
+    // Subscriptions are installed before sync, so entries already received
+    // via live events are fresher than this async snapshot. Skip them.
+    if (store.has(session.id)) continue
+    store.upsert(session.id, nodeFromSession(session, statusFromSessionStatus(statuses[session.id]) ?? "done"))
   }
 }
 

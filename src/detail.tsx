@@ -3,8 +3,8 @@
  * Detail route for open-agent-sidebar: the "agent-sidebar" view, the
  * "agent_sidebar.open" palette command, and a DialogSelect picker.
  */
-import { createMemo, createSignal, For, onMount, Show } from "solid-js"
-import { type Message, type Part, type Session, type TextPart } from "@opencode-ai/sdk/v2"
+import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js"
+import { type EventMessageUpdated, type Message, type Part, type Session, type TextPart } from "@opencode-ai/sdk/v2"
 import { type TuiPluginApi, type TuiThemeCurrent } from "@opencode-ai/plugin/tui"
 import { formatCost, formatTokens, statusIcon, type TokenCounts } from "./format"
 import { type SubagentNode, type SubagentStatus } from "./types"
@@ -79,23 +79,52 @@ function DetailView(props: { api: TuiPluginApi; nodes: Record<string, SubagentNo
   const theme = props.api.theme.current
   const session = createMemo(() => props.api.state.session.get(props.sessionID))
   const node = createMemo(() => props.nodes[props.sessionID])
+  const exists = createMemo(() => props.sessionID !== "" && (node() !== undefined || session() !== undefined))
   const [entries, setEntries] = createSignal<Array<{ info: Message; parts: Part[] }> | undefined>(undefined)
   const recent = createMemo(() => (entries() ?? []).slice(-MAX_MESSAGES).reverse())
-  onMount(() => {
-    if (props.sessionID === "") return
-    void props.api.client.session
-      .messages({ sessionID: props.sessionID })
-      .then((result) => setEntries(result.error ? [] : (result.data ?? [])))
-      .catch(() => setEntries([]))
+
+  createEffect(() => {
+    if (!exists()) {
+      setEntries(undefined)
+      return
+    }
+    let cancelled = false
+    onCleanup(() => {
+      cancelled = true
+    })
+    setEntries(undefined)
+
+    const refetch = (): void => {
+      void props.api.client.session
+        .messages({ sessionID: props.sessionID })
+        .then((result) => {
+          if (cancelled) return
+          setEntries(result.error ? [] : (result.data ?? []))
+        })
+        .catch(() => {
+          if (!cancelled) setEntries([])
+        })
+    }
+
+    refetch()
+
+    const unsubscribe = props.api.event.on("message.updated", (event: EventMessageUpdated) => {
+      if (event.properties.sessionID !== props.sessionID) return
+      refetch()
+    })
+    onCleanup(unsubscribe)
   })
+
   return (
     <box flexDirection="column" gap={1} paddingLeft={1} paddingRight={1}>
       <Show when={props.sessionID !== ""} fallback={<text fg={theme.textMuted}>No subagent selected</text>}>
-        <DetailHeader theme={theme} node={node()} session={session()} />
-        <text fg={theme.textMuted}>recent messages</text>
-        <Show when={entries() !== undefined} fallback={<text fg={theme.textMuted}>Loading messages…</text>}>
-          <Show when={recent().length > 0} fallback={<text fg={theme.textMuted}>No messages</text>}>
-            <For each={recent()}>{(entry) => <MessageRow theme={theme} entry={entry} />}</For>
+        <Show when={exists()} fallback={<text fg={theme.textMuted}>Subagent no longer exists</text>}>
+          <DetailHeader theme={theme} node={node()} session={session()} />
+          <text fg={theme.textMuted}>recent messages</text>
+          <Show when={entries() !== undefined} fallback={<text fg={theme.textMuted}>Loading messages…</text>}>
+            <Show when={recent().length > 0} fallback={<text fg={theme.textMuted}>No messages</text>}>
+              <For each={recent()}>{(entry) => <MessageRow theme={theme} entry={entry} />}</For>
+            </Show>
           </Show>
         </Show>
       </Show>

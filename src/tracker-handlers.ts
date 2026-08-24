@@ -30,8 +30,8 @@ export interface TrackerStore {
 }
 
 /** Map a host SessionStatus to the plugin's lifecycle status. */
-export function statusFromSessionStatus(status: SessionStatus | undefined): SubagentStatus {
-  if (status === undefined) return "done"
+export function statusFromSessionStatus(status: SessionStatus | undefined): SubagentStatus | undefined {
+  if (status === undefined) return undefined
   switch (status.type) {
     case "busy":
       return "running"
@@ -40,13 +40,14 @@ export function statusFromSessionStatus(status: SessionStatus | undefined): Suba
     case "idle":
       return "done"
     default:
-      return "done"
+      return undefined
   }
 }
 
 /** Build a SubagentNode from a host Session and its mapped status. */
 export function nodeFromSession(session: Session, status: SubagentStatus): SubagentNode {
   const parsed = parseTitle(session.title)
+  const created = session.time?.created
   return {
     sessionID: session.id,
     parentID: session.parentID ?? "",
@@ -54,7 +55,7 @@ export function nodeFromSession(session: Session, status: SubagentStatus): Subag
     description: parsed.description,
     title: session.title,
     status,
-    createdAt: session.time.created,
+    createdAt: Number.isFinite(created) ? created : Date.now(),
     cost: session.cost,
   }
 }
@@ -99,6 +100,7 @@ export function createSessionStatusHandler(store: TrackerStore) {
     const { sessionID, status } = event.properties
     if (!store.has(sessionID)) return
     const mapped = statusFromSessionStatus(status)
+    if (mapped === undefined) return
     store.patch(
       sessionID,
       mapped === "done" ? { status: mapped, activity: undefined } : { status: mapped },
@@ -106,12 +108,12 @@ export function createSessionStatusHandler(store: TrackerStore) {
   }
 }
 
-/** Mark a tracked subagent as errored. */
+/** Mark a tracked subagent as errored and clear its current activity. */
 export function createSessionErrorHandler(store: TrackerStore) {
   return (event: EventSessionError): void => {
     const sessionID = event.properties.sessionID
     if (sessionID === undefined || !store.has(sessionID)) return
-    store.patch(sessionID, { status: "error" })
+    store.patch(sessionID, { status: "error", activity: undefined })
   }
 }
 
@@ -128,10 +130,19 @@ export function createSessionDeletedHandler(store: TrackerStore) {
 export function createTodoUpdatedHandler(store: TrackerStore) {
   return (event: EventTodoUpdated): void => {
     const { sessionID, todos } = event.properties
-    if (!store.has(sessionID)) return
+    if (!store.has(sessionID) || !Array.isArray(todos)) return
     const done = todos.filter((todo) => todo.status === "completed").length
     store.patch(sessionID, { todos: { done, total: todos.length } })
   }
+}
+
+/** True when the value is an object with a string `status` field. */
+function hasStringStatus(value: unknown): value is { status: string } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { status?: unknown }).status === "string"
+  )
 }
 
 /** Reflect the currently running tool as the node's activity. */
@@ -139,6 +150,7 @@ export function createMessagePartUpdatedHandler(store: TrackerStore) {
   return (event: EventMessagePartUpdated): void => {
     const { sessionID, part } = event.properties
     if (!store.has(sessionID) || part.type !== "tool") return
+    if (!hasStringStatus(part.state)) return
     if (part.state.status === "running") {
       store.patch(sessionID, { activity: part.state.title ?? part.tool })
       return

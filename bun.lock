@@ -5,6 +5,7 @@
       "name": "open-agent-sidebar",
       "devDependencies": {
         "@opencode-ai/plugin": "1.18.21",
+        "@opencode-ai/sdk": "1.18.21",
         "@opentui/keymap": "^0.5.7",
         "@opentui/solid": "0.5.7",
         "solid-js": "1.9.12",
