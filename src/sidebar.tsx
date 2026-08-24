@@ -11,6 +11,7 @@ import { createMemo, For, Show } from "solid-js"
 import type { TuiPluginApi, TuiSlotContext, TuiThemeCurrent } from "@opencode-ai/plugin/tui"
 import { statusIcon } from "./format"
 import { buildTree, type TreeNode } from "./tree"
+import { statusFromSessionStatus } from "./tracker-handlers"
 import type { SubagentNode, SubagentStatus } from "./types"
 import type { Tracker } from "./tracker"
 
@@ -61,21 +62,26 @@ interface TreeRowProps {
   depth: number
 }
 
-/** One tree row: status icon, agent, description, optional progress and activity. */
+/** One tree entry: status + agent on the first line, description below. */
 function TreeRow(props: TreeRowProps) {
+  const indent = props.depth * 2
   return (
     <box flexDirection="column">
-      <box flexDirection="row" gap={1} paddingLeft={props.depth * 2}>
-        <text fg={statusColor(props.theme, props.node.node.status)}>{statusIcon(props.node.node.status)}</text>
+      <box flexDirection="row" paddingLeft={indent}>
+        <text fg={statusColor(props.theme, props.node.node.status)}>{`${statusIcon(props.node.node.status)} `}</text>
         <text>{props.node.node.agent}</text>
-        <text fg={props.theme.textMuted}>{truncate(props.node.node.description, MAX_DESCRIPTION)}</text>
         {props.node.node.todos === undefined ? null : (
-          <text fg={props.theme.info}>{`(${props.node.node.todos.done}/${props.node.node.todos.total})`}</text>
+          <text fg={props.theme.info}>{` (${props.node.node.todos.done}/${props.node.node.todos.total})`}</text>
         )}
         {props.node.node.activity === undefined ? null : (
-          <text fg={props.theme.textMuted}>{`[${truncate(props.node.node.activity, MAX_ACTIVITY)}]`}</text>
+          <text fg={props.theme.textMuted}>{` [${truncate(props.node.node.activity, MAX_ACTIVITY)}]`}</text>
         )}
       </box>
+      {props.node.node.description === "" ? null : (
+        <box paddingLeft={indent + 2}>
+          <text fg={props.theme.textMuted}>{truncate(props.node.node.description, MAX_DESCRIPTION)}</text>
+        </box>
+      )}
       <For each={props.node.children}>
         {(child) => <TreeRow theme={props.theme} node={child} depth={props.depth + 1} />}
       </For>
@@ -91,9 +97,12 @@ export function createSidebar(api: TuiPluginApi, tracker: Tracker) {
     // even when the plugin and host do not share a solid-js instance.
     tracker.observe(props.session_id)
     api.state.session.count()
+    const nodes: Record<string, SubagentNode> = {}
     for (const node of Object.values(tracker.nodes)) {
-      api.state.session.status(node.sessionID)
+      const mapped = statusFromSessionStatus(api.state.session.status(node.sessionID))
+      const next = mapped === undefined ? node : { ...node, status: mapped }
+      nodes[next.sessionID] = next
     }
-    return <SidebarView api={api} nodes={tracker.nodes} sessionID={props.session_id} />
+    return <SidebarView api={api} nodes={nodes} sessionID={props.session_id} />
   }
 }

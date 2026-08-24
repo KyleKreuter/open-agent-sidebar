@@ -14,6 +14,7 @@ import {
   createSessionCreatedHandler,
   createSessionDeletedHandler,
   createSessionErrorHandler,
+  createSessionIdleHandler,
   createSessionStatusHandler,
   createSessionUpdatedHandler,
   createTodoUpdatedHandler,
@@ -71,8 +72,8 @@ async function syncInitial(api: TuiPluginApi, store: TrackerStore, deletedIDs: S
     if (deletedIDs.has(session.id)) continue
     if (store.has(session.id)) continue
     const status = statusFromSessionStatus(statuses[session.id])
-    if (status === "done") continue
-    store.upsert(session.id, nodeFromSession(session, status ?? "running"))
+    if (status !== "running" && status !== "retry") continue
+    store.upsert(session.id, nodeFromSession(session, status))
   }
   deletedIDs.clear()
 }
@@ -99,6 +100,7 @@ export function createTracker(api: TuiPluginApi): Tracker {
     api.event.on("session.created", createSessionCreatedHandler(store)),
     api.event.on("session.updated", createSessionUpdatedHandler(store)),
     api.event.on("session.status", createSessionStatusHandler(store)),
+    api.event.on("session.idle", createSessionIdleHandler(store)),
     api.event.on("session.error", createSessionErrorHandler(store)),
     api.event.on("session.deleted", createSessionDeletedHandler(store, (sessionID) => deletedIDs.add(sessionID))),
     api.event.on("todo.updated", createTodoUpdatedHandler(store)),

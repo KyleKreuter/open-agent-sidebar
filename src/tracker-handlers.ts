@@ -12,6 +12,7 @@ import type {
   EventSessionCreated,
   EventSessionDeleted,
   EventSessionError,
+  EventSessionIdle,
   EventSessionStatus,
   EventSessionUpdated,
   EventTodoUpdated,
@@ -114,6 +115,15 @@ export function createSessionStatusHandler(store: TrackerStore) {
         ? { status: mapped, activity: undefined, activityCallID: undefined }
         : { status: mapped },
     )
+  }
+}
+
+/** Mark a tracked subagent done when the host reports the session idle. */
+export function createSessionIdleHandler(store: TrackerStore) {
+  return (event: EventSessionIdle): void => {
+    const sessionID = event.properties.sessionID
+    if (sessionID === undefined || !store.has(sessionID)) return
+    store.patch(sessionID, { status: "done", activity: undefined, activityCallID: undefined })
   }
 }
 

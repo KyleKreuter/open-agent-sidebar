@@ -9,7 +9,7 @@ in der nativen Session-Ansicht.
 ## Features
 
 - **Live-Liste mit Status** – laufende Subagenten der Session mit Typ (Agent), Beschreibung und
-  Status (`busy` / `retry` / `error`), farblich hervorgehoben. Fertige (`idle`) verschwinden.
+  Status (`busy` / `retry`), farblich hervorgehoben. Fertige und fehlgeschlagene verschwinden.
 - **Aktuelle Aktivität** – zeigt, welches Tool der Subagent gerade ausführt (laufendes Tool
   aus `message.part.updated`-Events).
 - **Todo-Fortschritt** – Fortschrittsanzeige aus `todo.updated`-Events (done/total).

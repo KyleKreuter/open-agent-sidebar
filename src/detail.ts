@@ -26,7 +26,7 @@ function flattenTree(tree: TreeNode[]): SubagentNode[] {
 export function pickerNodes(tracker: Tracker): SubagentNode[] {
   const rootID = tracker.currentRoot?.()
   if (rootID === undefined) return Object.values(tracker.nodes)
-  return flattenTree(buildTree(Object.values(tracker.nodes), rootID, { includeDone: true }))
+  return flattenTree(buildTree(Object.values(tracker.nodes), rootID, { includeInactive: true }))
 }
 
 /** Ask the host TUI to show the native session view for this subagent. */

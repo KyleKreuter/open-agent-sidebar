@@ -1,12 +1,14 @@
 import { describe, expect, test } from "bun:test"
 import type {
   EventSessionCreated,
+  EventSessionIdle,
   EventSessionStatus,
   EventSessionUpdated,
   Session,
 } from "@opencode-ai/sdk/v2"
 import {
   createSessionCreatedHandler,
+  createSessionIdleHandler,
   createSessionStatusHandler,
   createSessionUpdatedHandler,
   type TrackerStore,
@@ -168,5 +170,29 @@ describe("createSessionStatusHandler", () => {
 
     expect(store.nodes.child?.status).toBe("done")
     expect(store.nodes.child?.activity).toBeUndefined()
+  })
+})
+
+describe("createSessionIdleHandler", () => {
+  test("marks a tracked session done on session.idle", () => {
+    const store = createMemoryStore()
+    store.upsert("child", {
+      sessionID: "child",
+      parentID: "root",
+      agent: "coder",
+      description: "Task",
+      title: "Task (@coder subagent)",
+      status: "running",
+      createdAt: 1,
+    })
+    const handle = createSessionIdleHandler(store)
+
+    handle({
+      id: "evt",
+      type: "session.idle",
+      properties: { sessionID: "child" },
+    } satisfies EventSessionIdle)
+
+    expect(store.nodes.child?.status).toBe("done")
   })
 })

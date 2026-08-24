@@ -46,7 +46,7 @@ describe("buildTree", () => {
     expect(tree[0]?.children).toEqual([])
   })
 
-  test("keeps error and retry nodes visible", () => {
+  test("keeps retry nodes and omits errors", () => {
     const tree = buildTree(
       [
         node({ sessionID: "retrying", parentID: "root", status: "retry", createdAt: 1 }),
@@ -55,7 +55,7 @@ describe("buildTree", () => {
       "root",
     )
 
-    expect(tree.map((item) => item.node.sessionID)).toEqual(["retrying", "failed"])
+    expect(tree.map((item) => item.node.sessionID)).toEqual(["retrying"])
   })
 
   test("excludes nodes that belong to another root session", () => {
@@ -67,14 +67,14 @@ describe("buildTree", () => {
     expect(tree).toEqual([])
   })
 
-  test("includeDone keeps finished nodes in the tree", () => {
+  test("includeInactive keeps finished nodes in the tree", () => {
     const tree = buildTree(
       [
         node({ sessionID: "child-a", parentID: "root", status: "running", createdAt: 1 }),
         node({ sessionID: "child-b", parentID: "root", status: "done", createdAt: 2 }),
       ],
       "root",
-      { includeDone: true },
+      { includeInactive: true },
     )
 
     expect(tree.map((item) => item.node.sessionID)).toEqual(["child-a", "child-b"])

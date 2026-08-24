@@ -6,11 +6,11 @@
  * ancestor chain reaches the root session are included; nodes belonging to
  * other root sessions are excluded entirely. Finished (`done`) nodes are
  * omitted by default and their active descendants are hoisted. Pass
- * `{ includeDone: true }` to keep finished nodes (used by the session picker).
+ * `{ includeInactive: true }` to keep finished/errored nodes (session picker).
  * Input is never mutated.
  */
 
-import type { SubagentNode } from "./types"
+import { isActiveStatus, type SubagentNode } from "./types"
 
 /**
  * Tree node wrapping a subagent together with its nested descendants.
@@ -35,13 +35,13 @@ function byCreatedAt(a: TreeNode, b: TreeNode): number {
  * sessionID so malformed parent chains (self-parenting, cycles) terminate
  * instead of recursing forever. Nodes not reachable from the root session
  * belong to other root sessions and are excluded. Finished (`done`) nodes are
- * omitted unless `includeDone` is set; their still-active descendants are
+ * omitted unless `includeInactive` is set; their still-active descendants are
  * hoisted to the nearest visible ancestor so nested work stays visible after
  * a parent completes.
  */
 export interface BuildTreeOptions {
-  /** When true, finished nodes stay in the tree instead of being hoisted away. */
-  includeDone?: boolean
+  /** When true, finished and errored nodes stay in the tree. */
+  includeInactive?: boolean
 }
 
 export function buildTree(nodes: SubagentNode[], rootSessionID: string, options: BuildTreeOptions = {}): TreeNode[] {
@@ -63,7 +63,7 @@ export function buildTree(nodes: SubagentNode[], rootSessionID: string, options:
       if (visited.has(node.sessionID)) continue
       visited.add(node.sessionID)
       const nested = mount(node.sessionID)
-      if (node.status === "done" && options.includeDone !== true) {
+      if (!isActiveStatus(node.status) && options.includeInactive !== true) {
         children.push(...nested)
         continue
       }
