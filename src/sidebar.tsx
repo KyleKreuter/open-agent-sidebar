@@ -11,7 +11,7 @@ import type { TuiPluginApi, TuiSlotContext, TuiThemeCurrent } from "@opencode-ai
 import { openSession } from "./detail"
 import { statusIcon } from "./format"
 import { buildTree, type TreeNode } from "./tree"
-import { statusFromSessionStatus } from "./tracker-handlers"
+import { applyHostStatus } from "./tracker-handlers"
 import type { SubagentNode, SubagentStatus } from "./types"
 import type { Tracker } from "./tracker"
 
@@ -68,8 +68,8 @@ function TreeRow(props: TreeRowProps) {
     <box flexDirection="column">
       <box flexDirection="column" paddingLeft={indent} onMouseDown={open}>
         <box flexDirection="row" onMouseDown={open}>
-          <text fg={statusColor(props.theme, props.node.node.status)}>{`${statusIcon(props.node.node.status)} `}</text>
-          <text onMouseDown={open}>{props.node.node.agent}</text>
+          <text fg={statusColor(props.theme, props.node.node.status)}>{statusIcon(props.node.node.status)}</text>
+          <text paddingLeft={1} onMouseDown={open}>{props.node.node.agent}</text>
           {props.node.node.todos === undefined ? null : (
             <text fg={props.theme.info}>{` (${props.node.node.todos.done}/${props.node.node.todos.total})`}</text>
           )}
@@ -99,8 +99,7 @@ export function createSidebar(api: TuiPluginApi, tracker: Tracker) {
     api.state.session.count()
     const nodes: Record<string, SubagentNode> = {}
     for (const node of Object.values(tracker.nodes)) {
-      const mapped = statusFromSessionStatus(api.state.session.status(node.sessionID))
-      const next = mapped === undefined ? node : { ...node, status: mapped }
+      const next = applyHostStatus(node, api.state.session.status(node.sessionID))
       nodes[next.sessionID] = next
     }
     return <SidebarView api={api} nodes={nodes} sessionID={props.session_id} />

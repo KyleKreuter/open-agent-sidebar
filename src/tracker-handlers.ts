@@ -47,6 +47,13 @@ export function statusFromSessionStatus(status: SessionStatus | undefined): Suba
   }
 }
 
+/** Overlay the host session status onto a tracker node when the host reports one. */
+export function applyHostStatus(node: SubagentNode, host: SessionStatus | undefined): SubagentNode {
+  const mapped = statusFromSessionStatus(host)
+  if (mapped === undefined) return node
+  return { ...node, status: mapped }
+}
+
 /** Build a SubagentNode from a host Session and its mapped status. */
 export function nodeFromSession(session: Session, status: SubagentStatus): SubagentNode {
   const parsed = parseTitle(session.title)

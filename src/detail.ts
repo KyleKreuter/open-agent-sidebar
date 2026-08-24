@@ -7,8 +7,10 @@
  */
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui"
 import { buildTree, type TreeNode } from "./tree"
-import type { SubagentNode } from "./types"
+import { applyHostStatus } from "./tracker-handlers"
+import { isActiveStatus, type SubagentNode } from "./types"
 import type { Tracker } from "./tracker"
+import type { SessionStatus } from "@opencode-ai/sdk/v2"
 
 const OPEN_COMMAND = "agent_sidebar.open"
 
@@ -22,11 +24,17 @@ function flattenTree(tree: TreeNode[]): SubagentNode[] {
   return flat
 }
 
-/** Nodes for the picker: isolated to the observed root, including finished ones. */
-export function pickerNodes(tracker: Tracker): SubagentNode[] {
+/** Nodes for the picker: same filter as the sidebar (active only, current root). */
+export function pickerNodes(
+  tracker: Tracker,
+  statusOf?: (sessionID: string) => SessionStatus | undefined,
+): SubagentNode[] {
+  const nodes = Object.values(tracker.nodes).map((node) =>
+    statusOf === undefined ? node : applyHostStatus(node, statusOf(node.sessionID)),
+  )
   const rootID = tracker.currentRoot?.()
-  if (rootID === undefined) return Object.values(tracker.nodes)
-  return flattenTree(buildTree(Object.values(tracker.nodes), rootID, { includeInactive: true }))
+  if (rootID === undefined) return nodes.filter((node) => isActiveStatus(node.status))
+  return flattenTree(buildTree(nodes, rootID))
 }
 
 /** Ask the host TUI to show the native session view for this subagent. */
@@ -44,7 +52,7 @@ export function openSession(api: TuiPluginApi, sessionID: string): void {
 }
 
 function openSubagent(api: TuiPluginApi, tracker: Tracker): void {
-  const nodes = pickerNodes(tracker)
+  const nodes = pickerNodes(tracker, (sessionID) => api.state.session.status(sessionID))
   if (nodes.length === 0) {
     api.ui.toast({ message: "No subagents", variant: "info" })
     return

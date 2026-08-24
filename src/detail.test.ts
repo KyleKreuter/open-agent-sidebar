@@ -25,7 +25,7 @@ function tracker(nodes: SubagentNode[], root?: string): Tracker {
 }
 
 describe("pickerNodes", () => {
-  test("includes finished subagents of the observed root", () => {
+  test("omits finished subagents of the observed root", () => {
     const result = pickerNodes(
       tracker(
         [
@@ -37,10 +37,10 @@ describe("pickerNodes", () => {
       ),
     )
 
-    expect(result.map((item) => item.sessionID)).toEqual(["active", "finished"])
+    expect(result.map((item) => item.sessionID)).toEqual(["active"])
   })
 
-  test("returns all nodes when no root is observed", () => {
+  test("returns only active nodes when no root is observed", () => {
     const result = pickerNodes(
       tracker([
         node({ sessionID: "a", parentID: "root", status: "done" }),
@@ -48,6 +48,15 @@ describe("pickerNodes", () => {
       ]),
     )
 
-    expect(result.map((item) => item.sessionID).toSorted()).toEqual(["a", "b"])
+    expect(result.map((item) => item.sessionID)).toEqual(["b"])
+  })
+
+  test("treats a host-idle session as finished", () => {
+    const result = pickerNodes(
+      tracker([node({ sessionID: "stale", parentID: "root", status: "running" })], "root"),
+      (sessionID) => (sessionID === "stale" ? { type: "idle" } : undefined),
+    )
+
+    expect(result).toEqual([])
   })
 })
