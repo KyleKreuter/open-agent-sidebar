@@ -5,7 +5,9 @@
  * into a nested tree by following `parentID` chains. Only nodes whose
  * ancestor chain reaches the root session are included; nodes belonging to
  * other root sessions are excluded entirely. Finished (`done`) nodes are
- * omitted and their active descendants are hoisted. Input is never mutated.
+ * omitted by default and their active descendants are hoisted. Pass
+ * `{ includeDone: true }` to keep finished nodes (used by the session picker).
+ * Input is never mutated.
  */
 
 import type { SubagentNode } from "./types"
@@ -33,10 +35,16 @@ function byCreatedAt(a: TreeNode, b: TreeNode): number {
  * sessionID so malformed parent chains (self-parenting, cycles) terminate
  * instead of recursing forever. Nodes not reachable from the root session
  * belong to other root sessions and are excluded. Finished (`done`) nodes are
- * omitted; their still-active descendants are hoisted to the nearest visible
- * ancestor so nested work stays visible after a parent completes.
+ * omitted unless `includeDone` is set; their still-active descendants are
+ * hoisted to the nearest visible ancestor so nested work stays visible after
+ * a parent completes.
  */
-export function buildTree(nodes: SubagentNode[], rootSessionID: string): TreeNode[] {
+export interface BuildTreeOptions {
+  /** When true, finished nodes stay in the tree instead of being hoisted away. */
+  includeDone?: boolean
+}
+
+export function buildTree(nodes: SubagentNode[], rootSessionID: string, options: BuildTreeOptions = {}): TreeNode[] {
   const byParent = new Map<string, SubagentNode[]>()
   for (const node of nodes) {
     const siblings = byParent.get(node.parentID)
@@ -55,7 +63,7 @@ export function buildTree(nodes: SubagentNode[], rootSessionID: string): TreeNod
       if (visited.has(node.sessionID)) continue
       visited.add(node.sessionID)
       const nested = mount(node.sessionID)
-      if (node.status === "done") {
+      if (node.status === "done" && options.includeDone !== true) {
         children.push(...nested)
         continue
       }

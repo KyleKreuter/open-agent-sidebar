@@ -77,7 +77,7 @@ async function syncInitial(api: TuiPluginApi, store: TrackerStore, deletedIDs: S
   deletedIDs.clear()
 }
 
-/** Public surface of the tracker consumed by the sidebar and detail route. */
+/** Public surface of the tracker consumed by the sidebar and session picker. */
 export interface Tracker {
   /** Reactive store of subagent nodes keyed by sessionID. */
   nodes: Record<string, SubagentNode>

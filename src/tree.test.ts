@@ -66,4 +66,17 @@ describe("buildTree", () => {
 
     expect(tree).toEqual([])
   })
+
+  test("includeDone keeps finished nodes in the tree", () => {
+    const tree = buildTree(
+      [
+        node({ sessionID: "child-a", parentID: "root", status: "running", createdAt: 1 }),
+        node({ sessionID: "child-b", parentID: "root", status: "done", createdAt: 2 }),
+      ],
+      "root",
+      { includeDone: true },
+    )
+
+    expect(tree.map((item) => item.node.sessionID)).toEqual(["child-a", "child-b"])
+  })
 })

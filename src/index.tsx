@@ -2,13 +2,13 @@
  * Open Agent Sidebar — plugin entry.
  *
  * Pure wiring only: create the subagent tracker, register the
- * `sidebar_content` slot (order 450), and wire the detail route plus
- * keymap layer via `registerDetail`. No business logic here.
+ * `sidebar_content` slot (order 450), and wire the open-session
+ * command via `registerOpen`. No business logic here.
  */
 import type { TuiPlugin, TuiPluginModule } from "@opencode-ai/plugin/tui"
 import { createTracker } from "./tracker"
 import { createSidebar } from "./sidebar"
-import { registerDetail } from "./detail"
+import { registerOpen } from "./detail"
 
 const tui: TuiPlugin = async (api) => {
   const tracker = createTracker(api)
@@ -18,7 +18,7 @@ const tui: TuiPlugin = async (api) => {
     slots: { sidebar_content: createSidebar(api, tracker) },
   })
 
-  registerDetail(api, tracker)
+  registerOpen(api, tracker)
 }
 
 const plugin: TuiPluginModule & { id: string } = {

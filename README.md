@@ -3,8 +3,8 @@
 Ein opencode-TUI-Plugin, das alle Subagenten der aktuellen Session live in der Sidebar anzeigt.
 Subagenten sind Child-Sessions, die vom `task`-Tool erzeugt werden. Das Plugin verfolgt ihren
 Lebenszyklus über den opencode-Event-Stream und rendert sie als verschachtelten Baum mit Status,
-aktueller Aktivität und Todo-Fortschritt. Eine eigene Vollbild-Route zeigt die Detail-Ansicht
-eines Subagenten mit den letzten Nachrichten sowie Kosten- und Token-Angaben.
+aktueller Aktivität und Todo-Fortschritt. Über `ctrl+shift+a` öffnet man einen Subagenten
+in der nativen Session-Ansicht.
 
 ## Features
 
@@ -13,8 +13,8 @@ eines Subagenten mit den letzten Nachrichten sowie Kosten- und Token-Angaben.
 - **Aktuelle Aktivität** – zeigt, welches Tool der Subagent gerade ausführt (laufendes Tool
   aus `message.part.updated`-Events).
 - **Todo-Fortschritt** – Fortschrittsanzeige aus `todo.updated`-Events (done/total).
-- **Detail-Ansicht (Route)** – eigene Vollbild-Route `agent-sidebar` mit den letzten Nachrichten
-  sowie Kosten- und Token-Angaben des Subagenten.
+- **Native Session-Ansicht** – `ctrl+shift+a` öffnet den Subagenten in der Host-Session-Ansicht,
+  inklusive der üblichen Zurück-Navigation.
 - **Verschachtelte Subagenten** – Baumstruktur über `parentID`-Ketten, rekursiv dargestellt.
 
 ## Anforderungen
@@ -50,9 +50,9 @@ Alternativ kann auf das gebaute Bundle gezeigt werden: `["../dist/index.js", {}]
 
 ## Bedienung
 
-- **Keybind:** `ctrl+shift+a` öffnet die Detail-Ansicht des ausgewählten Subagenten.
-- **Command Palette:** Befehl „Subagents: Open detail view“.
-- **Slash-Command:** `/agents` öffnet die Detail-Ansicht ebenfalls.
+- **Keybind:** `ctrl+shift+a` öffnet den Subagenten in der nativen Session-Ansicht.
+- **Command Palette:** Befehl „Subagents: Open native session“.
+- **Slash-Command:** `/agents` öffnet die native Session-Ansicht ebenfalls.
 
 ## Entwicklung
 
@@ -74,14 +74,14 @@ beim Build als extern markiert und nicht ins Bundle übernommen:
 ## Architektur
 
 ```
-Event-Stream (tracker) ──► Solid-Store ──► Sidebar-Slot + Detail-Route
+Event-Stream (tracker) ──► Solid-Store ──► Sidebar-Slot + native Session-Ansicht
 ```
 
 1. **Tracker** – abonniert die relevanten Events (`session.created`, `session.status`,
    `session.error`, `session.deleted`, `todo.updated`, `message.part.updated`) und hält einen
    reaktiven Solid-Store aktuell. Initial-Sync über `api.client`.
 2. **Sidebar-Slot** – rendert den Subagenten-Baum in den `sidebar_content`-Slot (Order 450).
-3. **Detail-Route** – eigene Route `agent-sidebar` mit Nachrichten, Kosten und Tokens.
+3. **Öffnen** – `client.tui.selectSession` wechselt in die native Session-Ansicht des Subagenten.
 
 ## Lizenz
 
