@@ -11,7 +11,7 @@
  *
  * - "running": the subagent is actively executing (busy).
  * - "retry":   the subagent is waiting for a retry (SessionStatus "retry").
- * - "done":    the subagent finished and remains visible for the session.
+ * - "done":    the subagent finished and is omitted from the sidebar tree.
  * - "error":   the subagent failed (SessionStatus "error").
  */
 export type SubagentStatus = "running" | "retry" | "done" | "error"

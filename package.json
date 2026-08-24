@@ -15,7 +15,8 @@
   ],
   "scripts": {
     "build": "NODE_ENV=production bun build src/index.tsx --outdir dist --target bun --format esm --external @opencode-ai/plugin --external @opencode-ai/plugin/tui --external @opencode-ai/sdk --external @opentui/solid --external @opentui/solid/jsx-runtime --external @opentui/core --external @opentui/keymap --external solid-js --external solid-js/store",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
   },
   "peerDependencies": {
     "@opencode-ai/plugin": "^1.18.0",

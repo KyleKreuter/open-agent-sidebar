@@ -8,8 +8,8 @@ eines Subagenten mit den letzten Nachrichten sowie Kosten- und Token-Angaben.
 
 ## Features
 
-- **Live-Liste mit Status** – alle Subagenten der Session mit Typ (Agent), Beschreibung und
-  Status (`busy` / `idle` / `error`), farblich hervorgehoben.
+- **Live-Liste mit Status** – laufende Subagenten der Session mit Typ (Agent), Beschreibung und
+  Status (`busy` / `retry` / `error`), farblich hervorgehoben. Fertige (`idle`) verschwinden.
 - **Aktuelle Aktivität** – zeigt, welches Tool der Subagent gerade ausführt (laufendes Tool
   aus `message.part.updated`-Events).
 - **Todo-Fortschritt** – Fortschrittsanzeige aus `todo.updated`-Events (done/total).

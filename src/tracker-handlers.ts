@@ -81,11 +81,16 @@ export function createSessionCreatedHandler(store: TrackerStore) {
   }
 }
 
-/** Refresh title/description/agent/cost of a tracked subagent. */
+/** Insert a missed child session, or refresh title/description/agent/cost. */
 export function createSessionUpdatedHandler(store: TrackerStore) {
   return (event: EventSessionUpdated): void => {
     const info = event.properties.info
-    if (!isSession(info) || !store.has(info.id)) return
+    if (!isSession(info)) return
+    if (!store.has(info.id)) {
+      if (!info.parentID) return
+      store.upsert(info.id, nodeFromSession(info, "running"))
+      return
+    }
     const parsed = parseTitle(info.title)
     store.patch(info.id, {
       title: info.title,

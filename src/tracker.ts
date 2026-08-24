@@ -70,7 +70,9 @@ async function syncInitial(api: TuiPluginApi, store: TrackerStore, deletedIDs: S
     // already received via live events are fresher than this snapshot.
     if (deletedIDs.has(session.id)) continue
     if (store.has(session.id)) continue
-    store.upsert(session.id, nodeFromSession(session, statusFromSessionStatus(statuses[session.id]) ?? "done"))
+    const status = statusFromSessionStatus(statuses[session.id])
+    if (status === "done") continue
+    store.upsert(session.id, nodeFromSession(session, status ?? "running"))
   }
   deletedIDs.clear()
 }

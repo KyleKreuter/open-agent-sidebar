@@ -42,7 +42,10 @@ export interface SidebarViewProps {
 /** Sidebar tree rooted at the current session, live-updating with the tracker. */
 export function SidebarView(props: SidebarViewProps) {
   const theme = props.api.theme.current
-  const tree = createMemo(() => buildTree(Object.values(props.nodes), props.sessionID))
+  const tree = createMemo(() => {
+    void Object.keys(props.nodes)
+    return buildTree(Object.values(props.nodes), props.sessionID)
+  })
   return (
     <box flexDirection="column">
       <Show when={tree().length > 0} fallback={<text fg={theme.textMuted}>no subagents</text>}>
@@ -60,20 +63,17 @@ interface TreeRowProps {
 
 /** One tree row: status icon, agent, description, optional progress and activity. */
 function TreeRow(props: TreeRowProps) {
-  const node = props.node.node
-  const todos = node.todos
-  const activity = node.activity
   return (
     <box flexDirection="column">
       <box flexDirection="row" gap={1} paddingLeft={props.depth * 2}>
-        <text fg={statusColor(props.theme, node.status)}>{statusIcon(node.status)}</text>
-        <text>{node.agent}</text>
-        <text fg={props.theme.textMuted}>{truncate(node.description, MAX_DESCRIPTION)}</text>
-        {todos === undefined ? null : (
-          <text fg={props.theme.info}>{`(${todos.done}/${todos.total})`}</text>
+        <text fg={statusColor(props.theme, props.node.node.status)}>{statusIcon(props.node.node.status)}</text>
+        <text>{props.node.node.agent}</text>
+        <text fg={props.theme.textMuted}>{truncate(props.node.node.description, MAX_DESCRIPTION)}</text>
+        {props.node.node.todos === undefined ? null : (
+          <text fg={props.theme.info}>{`(${props.node.node.todos.done}/${props.node.node.todos.total})`}</text>
         )}
-        {activity === undefined ? null : (
-          <text fg={props.theme.textMuted}>{`[${truncate(activity, MAX_ACTIVITY)}]`}</text>
+        {props.node.node.activity === undefined ? null : (
+          <text fg={props.theme.textMuted}>{`[${truncate(props.node.node.activity, MAX_ACTIVITY)}]`}</text>
         )}
       </box>
       <For each={props.node.children}>
@@ -86,9 +86,14 @@ function TreeRow(props: TreeRowProps) {
 /** Factory producing a sidebar_content slot renderer for api.slots.register. */
 export function createSidebar(api: TuiPluginApi, tracker: Tracker) {
   return (_ctx: TuiSlotContext, props: { session_id: string }) => {
-    // The slot renderer receives the currently viewed session on every
-    // render; record it so the detail picker can isolate to this root.
+    // The slot renderer is a plain function invoked from the host memo.
+    // Touch host-reactive session state so create/status remounts the slot
+    // even when the plugin and host do not share a solid-js instance.
     tracker.observe(props.session_id)
+    api.state.session.count()
+    for (const node of Object.values(tracker.nodes)) {
+      api.state.session.status(node.sessionID)
+    }
     return <SidebarView api={api} nodes={tracker.nodes} sessionID={props.session_id} />
   }
 }
