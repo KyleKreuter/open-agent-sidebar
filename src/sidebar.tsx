@@ -3,12 +3,12 @@
  * Sidebar UI for the open-agent-sidebar plugin.
  *
  * Renders the live subagent tree (built from tracker state via buildTree)
- * into the host-provided `sidebar_content` slot. Exposes a reusable
- * `SidebarView` component plus a `createSidebar` factory returning a slot
- * renderer suitable for `api.slots.register({ order, slots })`.
+ * into the host-provided `sidebar_content` slot. A click opens the native
+ * session view via `client.tui.selectSession`.
  */
-import { createMemo, For, Show } from "solid-js"
+import { For, Show } from "solid-js"
 import type { TuiPluginApi, TuiSlotContext, TuiThemeCurrent } from "@opencode-ai/plugin/tui"
+import { openSession } from "./detail"
 import { statusIcon } from "./format"
 import { buildTree, type TreeNode } from "./tree"
 import { statusFromSessionStatus } from "./tracker-handlers"
@@ -17,8 +17,6 @@ import type { Tracker } from "./tracker"
 
 /** Longest rendered description before truncation with an ellipsis. */
 const MAX_DESCRIPTION = 60
-/** Longest rendered activity line before truncation with an ellipsis. */
-const MAX_ACTIVITY = 30
 
 /** Map a subagent lifecycle status to its theme color. */
 function statusColor(theme: TuiThemeCurrent, status: SubagentStatus) {
@@ -43,47 +41,49 @@ export interface SidebarViewProps {
 /** Sidebar tree rooted at the current session, live-updating with the tracker. */
 export function SidebarView(props: SidebarViewProps) {
   const theme = props.api.theme.current
-  const tree = createMemo(() => {
-    void Object.keys(props.nodes)
-    return buildTree(Object.values(props.nodes), props.sessionID)
-  })
+  const tree = buildTree(Object.values(props.nodes), props.sessionID)
   return (
     <box flexDirection="column">
-      <Show when={tree().length > 0} fallback={<text fg={theme.textMuted}>no subagents</text>}>
-        <For each={tree()}>{(item) => <TreeRow theme={theme} node={item} depth={0} />}</For>
+      <Show when={tree.length > 0} fallback={<text fg={theme.textMuted}>no subagents</text>}>
+        <For each={tree}>{(item) => <TreeRow api={props.api} theme={theme} node={item} depth={0} />}</For>
       </Show>
     </box>
   )
 }
 
 interface TreeRowProps {
+  api: TuiPluginApi
   theme: TuiThemeCurrent
   node: TreeNode
   depth: number
 }
 
-/** One tree entry: status + agent on the first line, description below. */
+/** One tree entry: status + agent, description below. Click opens the native session. */
 function TreeRow(props: TreeRowProps) {
   const indent = props.depth * 2
+  const open = (): void => {
+    openSession(props.api, props.node.node.sessionID)
+  }
   return (
     <box flexDirection="column">
-      <box flexDirection="row" paddingLeft={indent}>
-        <text fg={statusColor(props.theme, props.node.node.status)}>{`${statusIcon(props.node.node.status)} `}</text>
-        <text>{props.node.node.agent}</text>
-        {props.node.node.todos === undefined ? null : (
-          <text fg={props.theme.info}>{` (${props.node.node.todos.done}/${props.node.node.todos.total})`}</text>
-        )}
-        {props.node.node.activity === undefined ? null : (
-          <text fg={props.theme.textMuted}>{` [${truncate(props.node.node.activity, MAX_ACTIVITY)}]`}</text>
+      <box flexDirection="column" paddingLeft={indent} onMouseDown={open}>
+        <box flexDirection="row" onMouseDown={open}>
+          <text fg={statusColor(props.theme, props.node.node.status)}>{`${statusIcon(props.node.node.status)} `}</text>
+          <text onMouseDown={open}>{props.node.node.agent}</text>
+          {props.node.node.todos === undefined ? null : (
+            <text fg={props.theme.info}>{` (${props.node.node.todos.done}/${props.node.node.todos.total})`}</text>
+          )}
+        </box>
+        {props.node.node.description === "" ? null : (
+          <box paddingLeft={2} onMouseDown={open}>
+            <text fg={props.theme.textMuted} onMouseDown={open}>
+              {truncate(props.node.node.description, MAX_DESCRIPTION)}
+            </text>
+          </box>
         )}
       </box>
-      {props.node.node.description === "" ? null : (
-        <box paddingLeft={indent + 2}>
-          <text fg={props.theme.textMuted}>{truncate(props.node.node.description, MAX_DESCRIPTION)}</text>
-        </box>
-      )}
       <For each={props.node.children}>
-        {(child) => <TreeRow theme={props.theme} node={child} depth={props.depth + 1} />}
+        {(child) => <TreeRow api={props.api} theme={props.theme} node={child} depth={props.depth + 1} />}
       </For>
     </box>
   )

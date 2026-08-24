@@ -30,7 +30,7 @@ export function pickerNodes(tracker: Tracker): SubagentNode[] {
 }
 
 /** Ask the host TUI to show the native session view for this subagent. */
-function openSession(api: TuiPluginApi, sessionID: string): void {
+export function openSession(api: TuiPluginApi, sessionID: string): void {
   void api.client.tui
     .selectSession({ sessionID })
     .then((result) => {

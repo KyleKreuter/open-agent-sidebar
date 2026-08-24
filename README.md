@@ -10,8 +10,8 @@ in der nativen Session-Ansicht.
 
 - **Live-Liste mit Status** – laufende Subagenten der Session mit Typ (Agent), Beschreibung und
   Status (`busy` / `retry`), farblich hervorgehoben. Fertige und fehlgeschlagene verschwinden.
-- **Aktuelle Aktivität** – zeigt, welches Tool der Subagent gerade ausführt (laufendes Tool
-  aus `message.part.updated`-Events).
+- **Klick öffnet Fullscreen** – Agent oder Beschreibung öffnet die native Session-Ansicht
+  (gleicher Weg wie `ctrl+shift+a`).
 - **Todo-Fortschritt** – Fortschrittsanzeige aus `todo.updated`-Events (done/total).
 - **Native Session-Ansicht** – `ctrl+shift+a` öffnet den Subagenten in der Host-Session-Ansicht,
   inklusive der üblichen Zurück-Navigation.
@@ -51,6 +51,7 @@ Alternativ kann auf das gebaute Bundle gezeigt werden: `["../dist/index.js", {}]
 ## Bedienung
 
 - **Keybind:** `ctrl+shift+a` öffnet den Subagenten in der nativen Session-Ansicht.
+- **Klick:** in der Sidebar auf Agent oder Beschreibung, ebenfalls native Session.
 - **Command Palette:** Befehl „Subagents: Open native session“.
 - **Slash-Command:** `/agents` öffnet die native Session-Ansicht ebenfalls.
 
