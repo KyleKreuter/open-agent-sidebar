@@ -69,7 +69,9 @@ function TreeRow(props: TreeRowProps) {
       <box flexDirection="column" paddingLeft={indent} onMouseDown={open}>
         <box flexDirection="row" onMouseDown={open}>
           <text fg={statusColor(props.theme, props.node.node.status)}>{statusIcon(props.node.node.status)}</text>
-          <text paddingLeft={1} onMouseDown={open}>{props.node.node.agent}</text>
+          <box paddingLeft={1} onMouseDown={open}>
+            <text onMouseDown={open}>{props.node.node.agent}</text>
+          </box>
           {props.node.node.todos === undefined ? null : (
             <text fg={props.theme.info}>{` (${props.node.node.todos.done}/${props.node.node.todos.total})`}</text>
           )}
