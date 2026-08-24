@@ -29,6 +29,7 @@ function createStoreAdapter(
 ): TrackerStore {
   return {
     has: (sessionID) => sessionID in nodes,
+    get: (sessionID) => nodes[sessionID],
     upsert: (sessionID, node) => setNodes(sessionID, node),
     patch: (sessionID, patch) => setNodes(sessionID, patch),
     removeSubtree: (sessionID) => {
@@ -53,32 +54,51 @@ function createStoreAdapter(
 }
 
 /** Load existing child sessions and their statuses into the store. */
-async function syncInitial(api: TuiPluginApi, store: TrackerStore): Promise<void> {
+async function syncInitial(api: TuiPluginApi, store: TrackerStore, deletedIDs: Set<string>): Promise<void> {
   const listResult = await api.client.session.list({ roots: false })
-  if (listResult.error || listResult.data === undefined) return
+  if (listResult.error || listResult.data === undefined) {
+    deletedIDs.clear()
+    return
+  }
   const statusResult = await api.client.session.status()
   const statuses = statusResult.data ?? {}
 
   for (const session of listResult.data) {
     if (session.parentID === undefined) continue
-    // Subscriptions are installed before sync, so entries already received
-    // via live events are fresher than this async snapshot. Skip them.
+    // A session deleted during the async sync must not be re-inserted by
+    // this snapshot. Subscriptions are installed before sync, so entries
+    // already received via live events are fresher than this snapshot.
+    if (deletedIDs.has(session.id)) continue
     if (store.has(session.id)) continue
     store.upsert(session.id, nodeFromSession(session, statusFromSessionStatus(statuses[session.id]) ?? "done"))
   }
+  deletedIDs.clear()
+}
+
+/** Public surface of the tracker consumed by the sidebar and detail route. */
+export interface Tracker {
+  /** Reactive store of subagent nodes keyed by sessionID. */
+  nodes: Record<string, SubagentNode>
+  /** Record the currently viewed root session (called on every sidebar render). */
+  observe(sessionID: string): void
+  /** The last observed root session ID, if any. */
+  currentRoot(): string | undefined
 }
 
 /** Create the tracker: reactive store, event subscriptions, initial sync. */
-export function createTracker(api: TuiPluginApi): { nodes: Record<string, SubagentNode> } {
+export function createTracker(api: TuiPluginApi): Tracker {
   const [nodes, setNodes] = createStore<Record<string, SubagentNode>>({})
   const store = createStoreAdapter(nodes, setNodes)
+
+  const deletedIDs = new Set<string>()
+  let observedRoot: string | undefined
 
   const unsubscribes = [
     api.event.on("session.created", createSessionCreatedHandler(store)),
     api.event.on("session.updated", createSessionUpdatedHandler(store)),
     api.event.on("session.status", createSessionStatusHandler(store)),
     api.event.on("session.error", createSessionErrorHandler(store)),
-    api.event.on("session.deleted", createSessionDeletedHandler(store)),
+    api.event.on("session.deleted", createSessionDeletedHandler(store, (sessionID) => deletedIDs.add(sessionID))),
     api.event.on("todo.updated", createTodoUpdatedHandler(store)),
     api.event.on("message.part.updated", createMessagePartUpdatedHandler(store)),
   ]
@@ -86,7 +106,13 @@ export function createTracker(api: TuiPluginApi): { nodes: Record<string, Subage
     api.lifecycle.onDispose(unsubscribe)
   }
 
-  void syncInitial(api, store).catch(() => {})
+  void syncInitial(api, store, deletedIDs).catch(() => {})
 
-  return { nodes }
+  return {
+    nodes,
+    observe: (sessionID) => {
+      observedRoot = sessionID
+    },
+    currentRoot: () => observedRoot,
+  }
 }

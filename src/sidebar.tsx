@@ -12,6 +12,7 @@ import type { TuiPluginApi, TuiSlotContext, TuiThemeCurrent } from "@opencode-ai
 import { statusIcon } from "./format"
 import { buildTree, type TreeNode } from "./tree"
 import type { SubagentNode, SubagentStatus } from "./types"
+import type { Tracker } from "./tracker"
 
 /** Longest rendered description before truncation with an ellipsis. */
 const MAX_DESCRIPTION = 60
@@ -83,8 +84,11 @@ function TreeRow(props: TreeRowProps) {
 }
 
 /** Factory producing a sidebar_content slot renderer for api.slots.register. */
-export function createSidebar(api: TuiPluginApi, nodes: Record<string, SubagentNode>) {
-  return (_ctx: TuiSlotContext, props: { session_id: string }) => (
-    <SidebarView api={api} nodes={nodes} sessionID={props.session_id} />
-  )
+export function createSidebar(api: TuiPluginApi, tracker: Tracker) {
+  return (_ctx: TuiSlotContext, props: { session_id: string }) => {
+    // The slot renderer receives the currently viewed session on every
+    // render; record it so the detail picker can isolate to this root.
+    tracker.observe(props.session_id)
+    return <SidebarView api={api} nodes={tracker.nodes} sessionID={props.session_id} />
+  }
 }

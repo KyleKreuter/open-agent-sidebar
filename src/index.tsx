@@ -15,7 +15,7 @@ const tui: TuiPlugin = async (api) => {
 
   api.slots.register({
     order: 450,
-    slots: { sidebar_content: createSidebar(api, tracker.nodes) },
+    slots: { sidebar_content: createSidebar(api, tracker) },
   })
 
   registerDetail(api, tracker)

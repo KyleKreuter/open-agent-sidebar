@@ -8,6 +8,8 @@ import { type EventMessageUpdated, type Message, type Part, type Session, type T
 import { type TuiPluginApi, type TuiThemeCurrent } from "@opencode-ai/plugin/tui"
 import { formatCost, formatTokens, statusIcon, type TokenCounts } from "./format"
 import { type SubagentNode, type SubagentStatus } from "./types"
+import { buildTree, type TreeNode } from "./tree"
+import type { Tracker } from "./tracker"
 
 const ROUTE_NAME = "agent-sidebar"
 const OPEN_COMMAND = "agent_sidebar.open"
@@ -46,8 +48,25 @@ function statusColor(theme: TuiThemeCurrent, status: SubagentStatus | undefined)
   if (status === "error") return theme.error
   return theme.textMuted
 }
-function openDetail(api: TuiPluginApi, tracker: { nodes: Record<string, SubagentNode> }): void {
-  const nodes = Object.values(tracker.nodes)
+/** Flatten a tree into its nodes, depth-first. */
+function flattenTree(tree: TreeNode[]): SubagentNode[] {
+  const flat: SubagentNode[] = []
+  for (const item of tree) {
+    flat.push(item.node)
+    flat.push(...flattenTree(item.children))
+  }
+  return flat
+}
+
+/** Nodes for the picker: isolated to the observed root session when known. */
+function pickerNodes(tracker: Tracker): SubagentNode[] {
+  const rootID = tracker.currentRoot?.()
+  if (rootID === undefined) return Object.values(tracker.nodes)
+  return flattenTree(buildTree(Object.values(tracker.nodes), rootID))
+}
+
+function openDetail(api: TuiPluginApi, tracker: Tracker): void {
+  const nodes = pickerNodes(tracker)
   if (nodes.length === 0) {
     api.ui.toast({ message: "No subagents", variant: "info" })
     return
@@ -89,20 +108,22 @@ function DetailView(props: { api: TuiPluginApi; nodes: Record<string, SubagentNo
       return
     }
     let cancelled = false
+    let generation = 0
     onCleanup(() => {
       cancelled = true
     })
     setEntries(undefined)
 
     const refetch = (): void => {
+      const requestGeneration = ++generation
       void props.api.client.session
         .messages({ sessionID: props.sessionID })
         .then((result) => {
-          if (cancelled) return
+          if (cancelled || requestGeneration !== generation) return
           setEntries(result.error ? [] : (result.data ?? []))
         })
         .catch(() => {
-          if (!cancelled) setEntries([])
+          if (!cancelled && requestGeneration === generation) setEntries([])
         })
     }
 
@@ -161,7 +182,7 @@ function MessageRow(props: { theme: TuiThemeCurrent; entry: { info: Message; par
   )
 }
 
-export function registerDetail(api: TuiPluginApi, tracker: { nodes: Record<string, SubagentNode> }): void {
+export function registerDetail(api: TuiPluginApi, tracker: Tracker): void {
   const offRoute = api.route.register([
     {
       name: ROUTE_NAME,

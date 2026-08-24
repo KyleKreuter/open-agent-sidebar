@@ -17,6 +17,7 @@ import type {
   EventTodoUpdated,
   Session,
   SessionStatus,
+  ToolPart,
 } from "@opencode-ai/sdk/v2"
 import { parseTitle } from "./format"
 import type { SubagentNode, SubagentStatus } from "./types"
@@ -24,6 +25,7 @@ import type { SubagentNode, SubagentStatus } from "./types"
 /** Minimal store surface the handlers rely on. */
 export interface TrackerStore {
   has(sessionID: string): boolean
+  get(sessionID: string): SubagentNode | undefined
   upsert(sessionID: string, node: SubagentNode): void
   patch(sessionID: string, patch: Partial<SubagentNode>): void
   removeSubtree(sessionID: string): void
@@ -103,7 +105,9 @@ export function createSessionStatusHandler(store: TrackerStore) {
     if (mapped === undefined) return
     store.patch(
       sessionID,
-      mapped === "done" ? { status: mapped, activity: undefined } : { status: mapped },
+      mapped === "done"
+        ? { status: mapped, activity: undefined, activityCallID: undefined }
+        : { status: mapped },
     )
   }
 }
@@ -113,14 +117,16 @@ export function createSessionErrorHandler(store: TrackerStore) {
   return (event: EventSessionError): void => {
     const sessionID = event.properties.sessionID
     if (sessionID === undefined || !store.has(sessionID)) return
-    store.patch(sessionID, { status: "error", activity: undefined })
+    store.patch(sessionID, { status: "error", activity: undefined, activityCallID: undefined })
   }
 }
 
-/** Remove a subagent and all of its descendants. */
-export function createSessionDeletedHandler(store: TrackerStore) {
+/** Remove a subagent and all of its descendants; record the deletion. */
+export function createSessionDeletedHandler(store: TrackerStore, onDeleted: (sessionID: string) => void) {
   return (event: EventSessionDeleted): void => {
     const sessionID = event.properties.sessionID
+    if (sessionID === undefined) return
+    onDeleted(sessionID)
     if (!store.has(sessionID)) return
     store.removeSubtree(sessionID)
   }
@@ -145,18 +151,31 @@ function hasStringStatus(value: unknown): value is { status: string } {
   )
 }
 
+/** True when the value is a ToolPart-shaped object. */
+function isToolPart(value: unknown): value is ToolPart {
+  if (typeof value !== "object" || value === null) return false
+  const part = value as { type?: unknown; tool?: unknown; callID?: unknown; state?: unknown }
+  if (part.type !== "tool") return false
+  if (typeof part.tool !== "string") return false
+  if (typeof part.callID !== "string") return false
+  return hasStringStatus(part.state)
+}
+
 /** Reflect the currently running tool as the node's activity. */
 export function createMessagePartUpdatedHandler(store: TrackerStore) {
   return (event: EventMessagePartUpdated): void => {
-    const { sessionID, part } = event.properties
-    if (!store.has(sessionID) || part.type !== "tool") return
-    if (!hasStringStatus(part.state)) return
+    const properties = event.properties
+    if (typeof properties !== "object" || properties === null) return
+    const { sessionID, part } = properties
+    if (!store.has(sessionID) || !isToolPart(part)) return
     if (part.state.status === "running") {
-      store.patch(sessionID, { activity: part.state.title ?? part.tool })
+      store.patch(sessionID, { activity: part.state.title ?? part.tool, activityCallID: part.callID })
       return
     }
     if (part.state.status === "completed" || part.state.status === "error") {
-      store.patch(sessionID, { activity: undefined })
+      const node = store.get(sessionID)
+      if (node?.activityCallID !== part.callID) return
+      store.patch(sessionID, { activity: undefined, activityCallID: undefined })
     }
   }
 }

@@ -40,6 +40,8 @@ export interface SubagentNode {
   createdAt: number
   /** Currently running tool, derived from message.part.updated events. */
   activity?: string
+  /** callID of the tool owning the displayed activity. */
+  activityCallID?: string
   /** Todo progress derived from todo.updated events. */
   todos?: { done: number; total: number }
   /** Accumulated cost of the subagent in USD. */
